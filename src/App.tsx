@@ -30,15 +30,18 @@ export const App: React.FC = () => {
 
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [sortKeys, setSortKeys] = useState<boolean>(false);
-  const [expandAllTrigger, setExpandAllTrigger] = useState<number>(0);
-  const [collapseAllTrigger, setCollapseAllTrigger] = useState<number>(0);
+  const [isInputHidden, setIsInputHidden] = useState<boolean>(false);
+  const [expandDepth, setExpandDepth] = useState<number>(0);
+  const [expandSignal, setExpandSignal] = useState<number>(0);
+  const [collapseSignal, setCollapseSignal] = useState<number>(0);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Search hook over parsed JSON value
+  // Search hook over parsed JSON value with debounced query
   const {
     searchQuery,
+    debouncedQuery,
     setSearchQuery,
     totalMatches,
     currentMatchIndex,
@@ -66,6 +69,34 @@ export const App: React.FC = () => {
       return () => window.clearTimeout(timer);
     }
   }, [parseResult, rawJson, saveToHistory]);
+
+  // Determine if Expand All is safe (only for small JSON documents)
+  const canExpandAll = Boolean(
+    parseResult.isValid &&
+    (parseResult.stats.objectCount + parseResult.stats.arrayCount) <= 120 &&
+    parseResult.stats.sizeBytes <= 60_000
+  );
+
+  const handleExpandLevel = useCallback((level: number) => {
+    setExpandDepth(level);
+    setExpandSignal((s) => s + 1);
+    toast.success(`Expanded to ${level} level${level > 1 ? 's' : ''}`);
+  }, []);
+
+  const handleExpandAll = useCallback(() => {
+    if (!canExpandAll) {
+      toast.warning('Expand All is disabled for large JSON to maintain performance. Use +1 / +2 Levels.');
+      return;
+    }
+    setExpandDepth(999);
+    setExpandSignal((s) => s + 1);
+    toast.success('All nodes expanded');
+  }, [canExpandAll]);
+
+  const handleCollapseAll = useCallback(() => {
+    setCollapseSignal((s) => s + 1);
+    toast.success('All nodes collapsed');
+  }, []);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -103,7 +134,6 @@ export const App: React.FC = () => {
 
       // Ctrl + F -> Focus Search input
       if (isCtrlOrCmd && (e.key === 'f' || e.key === 'F')) {
-        // Prevent default browser find dialog
         e.preventDefault();
         if (viewMode !== 'tree') {
           setViewMode('tree');
@@ -112,6 +142,13 @@ export const App: React.FC = () => {
           searchInputRef.current?.focus();
           searchInputRef.current?.select();
         }, 50);
+        return;
+      }
+
+      // Ctrl + B -> Toggle Input Panel
+      if (isCtrlOrCmd && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        setIsInputHidden((prev) => !prev);
         return;
       }
     };
@@ -138,21 +175,25 @@ export const App: React.FC = () => {
 
       {/* Main Split Body: Left Editor / Right Viewer */}
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Left Pane: JSON Editor */}
-        <div className="w-full md:w-1/2 h-1/2 md:h-full border-b md:border-b-0 md:border-r border-border flex flex-col">
-          <JsonEditor
-            value={rawJson}
-            onChange={setRawJson}
-            onFormat={format}
-            onMinify={minify}
-            onClear={clear}
-            isValid={parseResult.isValid}
-            errorLine={!parseResult.isValid ? parseResult.line : undefined}
-          />
-        </div>
+        {/* Left Pane: JSON Editor (collapsible) */}
+        {!isInputHidden && (
+          <div className="w-full md:w-1/2 h-1/2 md:h-full border-b md:border-b-0 md:border-r border-border flex flex-col">
+            <JsonEditor
+              value={rawJson}
+              onChange={setRawJson}
+              onFormat={format}
+              onMinify={minify}
+              onClear={clear}
+              isValid={parseResult.isValid}
+              errorLine={!parseResult.isValid ? parseResult.line : undefined}
+            />
+          </div>
+        )}
 
         {/* Right Pane: Tree / Pretty / Raw / Empty State */}
-        <div className="w-full md:w-1/2 h-1/2 md:h-full flex flex-col bg-card/10 overflow-hidden">
+        <div className={`h-full flex flex-col bg-card/10 overflow-hidden ${
+          isInputHidden ? 'w-full' : 'w-full md:w-1/2 h-1/2 md:h-full'
+        }`}>
           {!rawJson.trim() ? (
             <EmptyState
               onLoadSample={loadSample}
@@ -160,14 +201,18 @@ export const App: React.FC = () => {
             />
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Tabs and Tree View Controls */}
+              {/* Tabs, Tree Controls and Hide Input button */}
               <ViewTabs
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
                 sortKeys={sortKeys}
                 onToggleSortKeys={() => setSortKeys(!sortKeys)}
-                onExpandAll={() => setExpandAllTrigger((prev) => prev + 1)}
-                onCollapseAll={() => setCollapseAllTrigger((prev) => prev + 1)}
+                onExpandLevel={handleExpandLevel}
+                onExpandAll={handleExpandAll}
+                onCollapseAll={handleCollapseAll}
+                canExpandAll={canExpandAll}
+                isInputHidden={isInputHidden}
+                onToggleInputHidden={() => setIsInputHidden(!isInputHidden)}
               />
 
               {/* View Content */}
@@ -193,9 +238,10 @@ export const App: React.FC = () => {
                         sortKeys={sortKeys}
                         activeAncestors={activeAncestors}
                         activeMatchPath={activeMatch?.formattedPath}
-                        searchQuery={searchQuery}
-                        expandAllTrigger={expandAllTrigger}
-                        collapseAllTrigger={collapseAllTrigger}
+                        searchQuery={debouncedQuery}
+                        expandDepth={expandDepth}
+                        expandSignal={expandSignal}
+                        collapseSignal={collapseSignal}
                       />
                     ) : (
                       <div className="p-6 text-center text-xs text-muted-foreground flex flex-col items-center justify-center h-full">
