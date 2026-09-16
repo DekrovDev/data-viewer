@@ -109,7 +109,9 @@ function buildOverview(db: any, fileName: string, fileSizeBytes: number): Databa
 }
 
 /**
- * Fetches the database schema (tables, views, indexes, triggers) with row counts for tables.
+ * Fetches the database schema (tables, views, indexes, triggers).
+ * Intentionally does NOT fetch row counts — those are fetched lazily
+ * in GET_TABLE_ROWS when the user actually opens a table.
  */
 function getSchema(db: any): DatabaseSchema {
   const rows: any[] = [];
@@ -123,8 +125,8 @@ function getSchema(db: any): DatabaseSchema {
 
   for (const item of rows) {
     if (item.type === 'table') {
-      const rowCount = Number(getScalar(db, `SELECT count(*) FROM ${quoteIdentifier(item.name)};`, 0));
-      schema.tables.push({ ...item, rowCount });
+      // rowCount intentionally omitted here — fetched lazily
+      schema.tables.push(item);
     } else if (item.type === 'view') {
       schema.views.push(item);
     } else if (item.type === 'index') {
@@ -342,52 +344,49 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         if (!activeDb) throw new Error('No database is currently open');
         const { sql } = payload as ExecuteQueryPayload;
 
-        // 1. Validate read-only in JS
+        // 1. JS-level pre-check (fast quote-aware statement counting and keyword validation)
         const validation = validateReadOnlyQuery(sql);
         if (!validation.isSafe) {
           throw new Error(validation.reason || 'Query validation failed');
         }
 
-        // 2. Prepare & verify read-only via SQLite C API
+        // 2. Prepare & verify read-only via SQLite C API (authoritative check)
         let stmt: any = null;
         try {
           stmt = activeDb.prepare(sql);
           if (sqlite.capi.sqlite3_stmt_readonly) {
             const isReadonly = Boolean(sqlite.capi.sqlite3_stmt_readonly(stmt.pointer));
             if (!isReadonly) {
-              stmt.finalize();
-              stmt = null;
               throw new Error('Query blocked: SQLite engine identified statement as modifying/not read-only.');
             }
           }
-        } finally {
-          if (stmt) stmt.finalize();
-        }
 
-        // 3. Execute with safety row cap
-        const columns: string[] = [];
-        const rows: any[][] = [];
-        let rowCount = 0;
-        let truncated = false;
+          // 3. Step through rows directly.
+          // Stop iterating immediately after row 5001 (MAX_QUERY_ROWS + 1).
+          // This avoids scanning millions of rows in SQLite while still detecting truncation accurately.
+          const columns: string[] = stmt.getColumnNames() || [];
+          const rows: any[][] = [];
+          let truncated = false;
 
-        const start = performance.now();
-        activeDb.exec({
-          sql,
-          rowMode: 'array',
-          columnNames: columns,
-          callback: (row: any[]) => {
-            rowCount++;
+          const start = performance.now();
+          while (stmt.step()) {
             if (rows.length < MAX_QUERY_ROWS) {
-              rows.push(row);
+              rows.push(stmt.get([]));
             } else {
               truncated = true;
+              break; // Stop iterating SQLite immediately after 5001 rows!
             }
-          },
-        });
-        const durationMs = Math.round(performance.now() - start);
+          }
+          const durationMs = Math.round(performance.now() - start);
+          const rowCount = rows.length;
 
-        const result: SqlQueryResult = { columns, rows, rowCount, truncated, durationMs, sql };
-        self.postMessage({ id, ok: true, data: result } as WorkerResponse);
+          const result: SqlQueryResult = { columns, rows, rowCount, truncated, durationMs, sql };
+          self.postMessage({ id, ok: true, data: result } as WorkerResponse);
+        } finally {
+          if (stmt) {
+            try { stmt.finalize(); } catch { /* ignore */ }
+          }
+        }
         break;
       }
 

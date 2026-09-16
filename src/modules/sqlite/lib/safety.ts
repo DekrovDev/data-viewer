@@ -40,18 +40,139 @@ const ALLOWED_PRAGMAS = new Set([
 ]);
 
 /**
- * Strips comments from SQL (both single-line -- and multi-line /* ... *\/).
+ * Strips SQL comments (both -- single-line and /* ... *\/ block).
+ * Skips comment-like text inside string literals.
  */
 export function stripComments(sql: string): string {
-  return sql
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/--.*$/gm, '')
-    .trim();
+  let result = '';
+  let i = 0;
+  const len = sql.length;
+
+  while (i < len) {
+    const ch = sql[i];
+
+    // Single-quoted string literal — pass through verbatim
+    if (ch === "'") {
+      let j = i + 1;
+      while (j < len) {
+        if (sql[j] === "'") {
+          // escaped '' inside string?
+          if (j + 1 < len && sql[j + 1] === "'") { j += 2; continue; }
+          break;
+        }
+        j++;
+      }
+      result += sql.slice(i, j + 1);
+      i = j + 1;
+      continue;
+    }
+
+    // Double-quoted identifier — pass through verbatim
+    if (ch === '"') {
+      let j = i + 1;
+      while (j < len) {
+        if (sql[j] === '"') {
+          if (j + 1 < len && sql[j + 1] === '"') { j += 2; continue; }
+          break;
+        }
+        j++;
+      }
+      result += sql.slice(i, j + 1);
+      i = j + 1;
+      continue;
+    }
+
+    // Backtick identifier
+    if (ch === '`') {
+      const j = sql.indexOf('`', i + 1);
+      if (j === -1) { result += sql.slice(i); break; }
+      result += sql.slice(i, j + 1);
+      i = j + 1;
+      continue;
+    }
+
+    // Block comment /* ... */
+    if (ch === '/' && i + 1 < len && sql[i + 1] === '*') {
+      const end = sql.indexOf('*/', i + 2);
+      i = end === -1 ? len : end + 2;
+      result += ' '; // replace with space to avoid merging tokens
+      continue;
+    }
+
+    // Line comment --
+    if (ch === '-' && i + 1 < len && sql[i + 1] === '-') {
+      const nl = sql.indexOf('\n', i + 2);
+      i = nl === -1 ? len : nl + 1;
+      result += ' ';
+      continue;
+    }
+
+    result += ch;
+    i++;
+  }
+
+  return result.trim();
+}
+
+/**
+ * Counts top-level SQL statements in a string using a quote-aware
+ * semicolon scanner.  Semicolons inside string literals, identifiers,
+ * or comments are ignored.
+ *
+ * Returns the number of non-empty statements found.
+ */
+export function countStatements(sql: string): number {
+  const clean = stripComments(sql);
+  let count = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let inBacktick = false;
+  let hasContent = false;
+
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+
+    if (inSingle) {
+      if (ch === "'" && clean[i + 1] === "'") { i++; continue; }
+      if (ch === "'") { inSingle = false; }
+      continue;
+    }
+    if (inDouble) {
+      if (ch === '"' && clean[i + 1] === '"') { i++; continue; }
+      if (ch === '"') { inDouble = false; }
+      continue;
+    }
+    if (inBacktick) {
+      if (ch === '`') { inBacktick = false; }
+      continue;
+    }
+
+    if (ch === "'") { inSingle = true; hasContent = true; continue; }
+    if (ch === '"') { inDouble = true; hasContent = true; continue; }
+    if (ch === '`') { inBacktick = true; hasContent = true; continue; }
+
+    if (ch === ';') {
+      if (hasContent) { count++; hasContent = false; }
+      continue;
+    }
+
+    if (ch !== ' ' && ch !== '\t' && ch !== '\n' && ch !== '\r') {
+      hasContent = true;
+    }
+  }
+
+  // trailing statement without semicolon
+  if (hasContent) count++;
+
+  return count;
 }
 
 /**
  * Validates whether a SQL query is safe and strictly read-only.
  * Returns { isSafe: true } or { isSafe: false, reason: string }.
+ *
+ * NOTE: This is the JS-level pre-check.  The authoritative runtime check
+ * is sqlite3_stmt_readonly() performed in the worker after prepare().
  */
 export function validateReadOnlyQuery(rawSql: string): { isSafe: boolean; reason?: string } {
   const clean = stripComments(rawSql);
@@ -59,24 +180,17 @@ export function validateReadOnlyQuery(rawSql: string): { isSafe: boolean; reason
     return { isSafe: false, reason: 'Empty query' };
   }
 
-  // Check for multiple statements
-  // Split on semicolons that are not inside quotes
-  const statements = clean
-    .split(';')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  if (statements.length > 1) {
+  // Reject multiple statements using quote-aware counter
+  const stmtCount = countStatements(clean);
+  if (stmtCount > 1) {
     return {
       isSafe: false,
       reason: 'Multiple statements are not permitted in a single run. Please execute one statement at a time.',
     };
   }
 
-  const statement = statements[0];
-
-  // Extract first token
-  const firstTokenMatch = statement.match(/^([A-Za-z_]+)/);
+  // Extract first token from cleaned SQL
+  const firstTokenMatch = clean.match(/^([A-Za-z_]+)/);
   if (!firstTokenMatch) {
     return { isSafe: false, reason: 'Invalid SQL statement syntax' };
   }
@@ -92,15 +206,15 @@ export function validateReadOnlyQuery(rawSql: string): { isSafe: boolean; reason
 
   // PRAGMA inspection
   if (firstToken === 'PRAGMA') {
-    // Check if it's an assignment like PRAGMA x = y
-    if (statement.includes('=')) {
+    // Reject assignment form: PRAGMA x = y
+    if (/PRAGMA\s+\w+\s*=/i.test(clean)) {
       return {
         isSafe: false,
         reason: 'Modifying PRAGMA statements are not allowed in Read-Only mode.',
       };
     }
 
-    const pragmaMatch = statement.match(/^PRAGMA\s+([A-Za-z0-9_]+)/i);
+    const pragmaMatch = clean.match(/^PRAGMA\s+([A-Za-z0-9_]+)/i);
     if (!pragmaMatch) {
       return { isSafe: false, reason: 'Invalid PRAGMA syntax.' };
     }
@@ -114,7 +228,7 @@ export function validateReadOnlyQuery(rawSql: string): { isSafe: boolean; reason
     }
   }
 
-  // Must be one of SELECT, WITH, EXPLAIN, PRAGMA
+  // Must be one of the allowed starting keywords
   if (!['SELECT', 'WITH', 'EXPLAIN', 'PRAGMA'].includes(firstToken)) {
     return {
       isSafe: false,
