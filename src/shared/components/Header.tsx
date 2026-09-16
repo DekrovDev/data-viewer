@@ -6,10 +6,12 @@ import {
   Download, 
   Sparkles,
   Github,
-  FileJson
+  FileJson,
+  Info
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { AboutModal } from './AboutModal';
 import { downloadFile } from '../../core/files/file';
 import { DataFormat } from '../../core/detection/types';
 import { toast } from 'sonner';
@@ -35,6 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
   isValidData,
   onDownload,
 }) => {
+  const [isAboutOpen, setIsAboutOpen] = React.useState(false);
+
   const handleDefaultDownload = () => {
     if (onDownload) {
       onDownload();
@@ -84,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Database className="w-3 h-3 text-blue-400" />
+              <Database className="w-3.5 h-3.5 text-blue-400" />
               <span>SQLite</span>
             </button>
           </div>
@@ -163,12 +167,28 @@ export const Header: React.FC<HeaderProps> = ({
             </Tooltip>
           )}
 
+          {/* Compact About Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => setIsAboutOpen(true)}
+                className="gap-1 text-muted-foreground hover:text-foreground"
+              >
+                <Info className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">About</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>About Data Viewer</TooltipContent>
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <a
                 href="https://github.com/DekrovDev/data-viewer"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center justify-center h-6 w-6 text-muted-foreground hover:text-foreground rounded transition-colors hover:bg-accent"
               >
                 <Github className="w-3.5 h-3.5" />
@@ -178,6 +198,9 @@ export const Header: React.FC<HeaderProps> = ({
           </Tooltip>
         </div>
       </header>
+
+      {/* About Modal */}
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
     </TooltipProvider>
   );
 };
