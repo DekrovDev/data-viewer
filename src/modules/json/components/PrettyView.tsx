@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { JsonValue } from '../types/json';
 import { sortJsonKeys } from '../lib/json';
 import { Copy } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button } from '../../../shared/components/ui/button';
 import { toast } from 'sonner';
 
 interface PrettyViewProps {

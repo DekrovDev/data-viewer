@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { HistoryItem } from '../types/json';
 
-const STORAGE_KEY = 'json_viewer_history_v1';
+const PRIMARY_KEY = 'data_viewer_json_history_v1';
+const LEGACY_KEY = 'json_viewer_history_v1';
 const MAX_HISTORY_ITEMS = 5;
 const MAX_HISTORY_BYTES = 1024 * 1024; // 1 MB limit
 
 export function useJsonHistory() {
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(PRIMARY_KEY) || localStorage.getItem(LEGACY_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
@@ -24,7 +25,7 @@ export function useJsonHistory() {
   // Save history state to localStorage on changes
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+      localStorage.setItem(PRIMARY_KEY, JSON.stringify(history));
     } catch {
       // Storage quota or private mode errors
     }
@@ -47,7 +48,7 @@ export function useJsonHistory() {
 
       const preview = trimmed.replace(/\s+/g, ' ').slice(0, 90);
       const newItem: HistoryItem = {
-        id: `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        id: Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6),
         timestamp: Date.now(),
         sizeBytes,
         preview,
@@ -65,7 +66,8 @@ export function useJsonHistory() {
   const clearHistory = useCallback(() => {
     setHistory([]);
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PRIMARY_KEY);
+      localStorage.removeItem(LEGACY_KEY);
     } catch {
       // Ignore
     }

@@ -7,8 +7,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription 
-} from './ui/dialog';
-import { Button } from './ui/button';
+} from '../../../shared/components/ui/dialog';
+import { Button } from '../../../shared/components/ui/button';
 import { History, Trash2, ArrowUpRight, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 

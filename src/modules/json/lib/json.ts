@@ -113,11 +113,12 @@ export function sortJsonKeys(value: JsonValue): JsonValue {
  */
 export const SAMPLE_JSON = `{
   "app": {
-    "name": "JSON Viewer",
+    "name": "Data Viewer",
+    "module": "JSON",
     "version": "1.0.0",
     "build": 2048,
     "isProduction": true,
-    "maintainedBy": null
+    "maintainedBy": "Dekrov"
   },
   "features": [
     "Interactive Tree Navigation",

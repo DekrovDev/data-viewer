@@ -1,7 +1,7 @@
 import React from 'react';
 import { ViewMode } from '../types/json';
-import { Button } from './ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Button } from '../../../shared/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../shared/components/ui/tooltip';
 import { 
   FolderTree, 
   FileCode, 

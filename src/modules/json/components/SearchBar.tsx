@@ -1,8 +1,8 @@
-import React, { forwardRef, useEffect } from 'react';
+import React, { forwardRef } from 'react';
 import { Search, ChevronUp, ChevronDown, X } from 'lucide-react';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Button } from '../../../shared/components/ui/button';
+import { Badge } from '../../../shared/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../shared/components/ui/tooltip';
 
 interface SearchBarProps {
   searchQuery: string;
@@ -37,11 +37,6 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(({
       onClear();
     }
   };
-
-  // Keep ref up to date
-  useEffect(() => {
-    // listener can be attached if needed
-  }, []);
 
   return (
     <TooltipProvider delayDuration={300}>

@@ -7,9 +7,9 @@ import {
   FolderOpen, 
   UploadCloud 
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { readJsonFile } from '../lib/file';
+import { Button } from '../../../shared/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../shared/components/ui/tooltip';
+import { readTextFile } from '../../../core/files/file';
 import { toast } from 'sonner';
 
 interface JsonEditorProps {
@@ -92,7 +92,7 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
     if (!file) return;
 
     try {
-      const result = await readJsonFile(file);
+      const result = await readTextFile(file);
       onChange(result.content);
       toast.success(`Loaded "${result.filename}"`);
     } catch (err: unknown) {
@@ -125,7 +125,7 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
     if (!file) return;
 
     try {
-      const result = await readJsonFile(file);
+      const result = await readTextFile(file);
       onChange(result.content);
       toast.success(`Loaded "${result.filename}"`);
     } catch (err: unknown) {

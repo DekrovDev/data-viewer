@@ -2,7 +2,7 @@ import React from 'react';
 import { ParseResult } from '../types/json';
 import { formatBytes } from '../lib/jsonStats';
 import { CheckCircle2, AlertCircle, Cpu } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../shared/components/ui/tooltip';
 
 interface StatusBarProps {
   parseResult: ParseResult;

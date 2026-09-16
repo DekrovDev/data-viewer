@@ -44,7 +44,7 @@ export function useJsonSearch(data: JsonValue | undefined) {
       if (val === null) {
         if ('null'.includes(query)) {
           results.push({
-            id: `${formatJsonPath(currentPath)}:val`,
+            id: formatJsonPath(currentPath) + ':val',
             path: currentPath,
             formattedPath: formatJsonPath(currentPath),
             type: 'value',
@@ -58,7 +58,7 @@ export function useJsonSearch(data: JsonValue | undefined) {
         const str = String(val);
         if (str.toLowerCase().includes(query)) {
           results.push({
-            id: `${formatJsonPath(currentPath)}:val`,
+            id: formatJsonPath(currentPath) + ':val',
             path: currentPath,
             formattedPath: formatJsonPath(currentPath),
             type: 'value',
@@ -72,7 +72,7 @@ export function useJsonSearch(data: JsonValue | undefined) {
         const str = String(val);
         if (str.toLowerCase().includes(query)) {
           results.push({
-            id: `${formatJsonPath(currentPath)}:val`,
+            id: formatJsonPath(currentPath) + ':val',
             path: currentPath,
             formattedPath: formatJsonPath(currentPath),
             type: 'value',
@@ -85,7 +85,7 @@ export function useJsonSearch(data: JsonValue | undefined) {
       if (typeof val === 'string') {
         if (val.toLowerCase().includes(query)) {
           results.push({
-            id: `${formatJsonPath(currentPath)}:val`,
+            id: formatJsonPath(currentPath) + ':val',
             path: currentPath,
             formattedPath: formatJsonPath(currentPath),
             type: 'value',
@@ -109,7 +109,7 @@ export function useJsonSearch(data: JsonValue | undefined) {
           // Check if key itself matches
           if (key.toLowerCase().includes(query)) {
             results.push({
-              id: `${formatJsonPath(keyPath)}:key`,
+              id: formatJsonPath(keyPath) + ':key',
               path: keyPath,
               formattedPath: formatJsonPath(keyPath),
               type: 'key',

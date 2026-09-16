@@ -158,4 +158,22 @@ assert.equal(calculateJsonStats([], '[]').arrayCount, 1);
 assert.equal(calculateJsonStats({}, '{}').objectCount, 1);
 
 console.log('All Statistics tests passed! ✓');
-console.log('Verification successful!');
+
+// Test format detection logic
+function detectFormat(name, type) {
+  const ext = name.split('.').pop()?.toLowerCase();
+  if (ext === 'json' || type === 'application/json') {
+    return 'json';
+  }
+  return 'unknown';
+}
+
+console.log('Testing Format Detection...');
+assert.equal(detectFormat('data.json', ''), 'json');
+assert.equal(detectFormat('dataset.JSON', ''), 'json');
+assert.equal(detectFormat('payload.txt', 'application/json'), 'json');
+assert.equal(detectFormat('document.csv', 'text/csv'), 'unknown');
+assert.equal(detectFormat('database.sqlite', 'application/x-sqlite3'), 'unknown');
+console.log('Format Detection tests passed! ✓');
+
+console.log('All verification tests passed successfully! ✓');
