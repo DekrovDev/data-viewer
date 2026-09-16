@@ -1,4 +1,4 @@
-﻿# Data Viewer
+# Data Viewer
 
 [![Production](https://img.shields.io/badge/domain-data.dekrov.com-blue.svg)](https://data.dekrov.com/)
 [![GitHub Pages](https://img.shields.io/badge/deployment-GitHub%20Pages-blue.svg)](https://pages.github.com/)
@@ -25,9 +25,27 @@ Built with a clean dark-mode developer aesthetic inspired by modern IDEs. **100%
   - Instant format & minify
   - Structural metrics & deep depth statistics
   - Local history (up to 5 recent documents stored in localStorage)
+- **SQLite** (Active & Fully Featured):
+  - In-browser SQLite engine powered by official `@sqlite.org/sqlite-wasm` via Web Worker
+  - Schema discovery, table navigation, and pagination
+  - Interactive SQL console with syntax highlighting via CodeMirror 6
+  - Strict read-only query guard preventing accidental mutations
+  - Export query results and tables to CSV or JSON
+- **CSV / TSV** (Active & Fully Featured):
+  - Dedicated Web Worker parsing powered by PapaParse (off main UI thread)
+  - Robust handling of quotes, multiline cells, escaped quotes (`""`), and UTF-8 BOM
+  - Auto-detection of delimiters (`,`, `;`, `\t`, `|`) with manual override
+  - Toggle `First row is header` on/off with duplicate header deduplication
+  - Virtualized table grid via `@tanstack/react-virtual` with sticky headers and row numbers
+  - Non-destructive sampling-based type inference (number, boolean, date, string)
+  - Real-time debounced search with match count indicator
+  - Column filter bar (contains, equals, starts with, ends with, greater than, less than, is empty, is not empty)
+  - Multi-directional column sorting
+  - Column statistics inspector (counts, nulls, unique count, min, max, sum, avg, lengths)
+  - Cell inspector modal for large or multiline values
+  - Raw CSV viewer with CodeMirror 6 and line numbering
+  - Export to CSV (RFC 4180) and JSON
 - **Future Modular Formats (Architecture Ready)**:
-  - CSV / TSV
-  - SQLite (.sqlite, .db)
   - Parquet
   - YAML / XML
 

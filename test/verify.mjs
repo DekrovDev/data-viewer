@@ -66,6 +66,13 @@ const { escapeCsvCell, exportToCsv, exportToJson } = await importModule(
 const { formatJsonPath } = await importModule('src/modules/json/lib/jsonPath.ts');
 const { calculateJsonStats } = await importModule('src/modules/json/lib/jsonStats.ts');
 
+const { detectDelimiter } = await importModule('src/modules/csv/lib/delimiter.ts');
+const { inferColumnType, computeColumnStats } = await importModule('src/modules/csv/lib/inference.ts');
+const { rowsToCsv, rowsToJson } = await importModule(
+  'src/modules/csv/lib/export.ts',
+  [mockFilePlugin]
+);
+
 console.log('✅ Real modules loaded successfully.\n');
 
 // ─── 2. SQLite Magic Header & Format Detection ──────────────────────────────
@@ -139,7 +146,23 @@ const jsonMimeOnly = createMockFile('payload.txt', '{}', 'application/json');
 assert.equal(await detectDataFormat(jsonMimeOnly), 'json', 'application/json mime detected as "json"');
 
 const csvFile = createMockFile('data.csv', 'a,b,c\n1,2,3', 'text/csv');
-assert.equal(await detectDataFormat(csvFile), 'unknown', 'data.csv detected as "unknown"');
+assert.equal(await detectDataFormat(csvFile), 'csv', 'data.csv detected as "csv"');
+
+const tsvFile = createMockFile('items.tsv', 'a\tb\tc\n1\t2\t3', 'text/tab-separated-values');
+assert.equal(await detectDataFormat(tsvFile), 'csv', 'items.tsv detected as "csv"');
+
+const csvUpperFile = createMockFile('DATASET.CSV', 'a,b');
+assert.equal(await detectDataFormat(csvUpperFile), 'csv', 'DATASET.CSV detected as "csv"');
+
+const sampleCsvPath = join(root, 'public', 'sample.csv');
+if (existsSync(sampleCsvPath)) {
+  const sampleCsvBuf = readFileSync(sampleCsvPath, 'utf8');
+  const sampleFile = createMockFile('sample.csv', sampleCsvBuf, 'text/csv');
+  assert.equal(await detectDataFormat(sampleFile), 'csv', 'public/sample.csv is recognized as "csv"');
+}
+
+const unknownFile = createMockFile('archive.tar.gz', 'binary content', 'application/gzip');
+assert.equal(await detectDataFormat(unknownFile), 'unknown', 'archive.tar.gz detected as "unknown"');
 
 console.log('✅ SQLite magic header & format detection tests passed.\n');
 
@@ -283,5 +306,81 @@ assert.equal(calculateJsonStats([], '[]').arrayCount, 1);
 assert.equal(calculateJsonStats({}, '{}').objectCount, 1);
 
 console.log('✅ JSON Statistics Calculator tests passed.\n');
+
+// ─── 8. CSV / TSV Module Tests ──────────────────────────────────────────────
+
+console.log('Testing CSV Delimiter Detection (REAL implementation)...');
+
+assert.equal(detectDelimiter('id,name,age\n1,Alice,30\n2,Bob,25'), ',', 'Detects comma delimiter');
+assert.equal(detectDelimiter('id;name;age\n1;Alice;30\n2;Bob;25'), ';', 'Detects semicolon delimiter');
+assert.equal(detectDelimiter('id\tname\tage\n1\tAlice\t30\n2\tBob\t25'), '\t', 'Detects tab delimiter');
+assert.equal(detectDelimiter('id|name|age\n1|Alice|30\n2|Bob|25'), '|', 'Detects pipe delimiter');
+
+console.log('✅ CSV Delimiter Detection passed.\n');
+
+console.log('Testing Column Type Inference (REAL implementation)...');
+
+assert.equal(inferColumnType(['1', '2', '3.14', '-42']), 'number', 'Numbers correctly inferred');
+assert.equal(inferColumnType(['true', 'false', 'TRUE', 'FALSE']), 'boolean', 'Booleans correctly inferred');
+assert.equal(inferColumnType(['2026-09-16', '2026-01-01T12:00:00Z', '2025-12-31']), 'date', 'Dates correctly inferred');
+assert.equal(inferColumnType(['hello', 'world', '123foo']), 'string', 'Strings correctly inferred');
+assert.equal(inferColumnType(['', '', '']), 'empty', 'Empty values inferred as empty');
+assert.equal(inferColumnType(['10', '20', '', '30']), 'number', 'Numbers with blanks still inferred as number');
+assert.equal(inferColumnType(['true', 'false', '']), 'boolean', 'Booleans with blanks still inferred as boolean');
+
+console.log('✅ Column Type Inference passed.\n');
+
+console.log('Testing Column Statistics Calculation (REAL implementation)...');
+
+const numStats = computeColumnStats('col_0', 'age', 'number', [
+  '25',
+  '35',
+  '30',
+  '',
+]);
+assert.equal(numStats.totalCount, 4, 'Total rows = 4');
+assert.equal(numStats.emptyCount, 1, 'Empty count = 1');
+assert.equal(numStats.nonEmptyCount, 3, 'Non-empty count = 3');
+assert.equal(numStats.uniqueCount, 3, 'Unique count = 3');
+assert.equal(numStats.min, 25, 'Min = 25');
+assert.equal(numStats.max, 35, 'Max = 35');
+assert.equal(numStats.avg, 30, 'Avg = 30');
+
+const strStats = computeColumnStats('col_1', 'city', 'string', [
+  'Paris',
+  'Tokyo',
+  'Amsterdam',
+]);
+assert.equal(strStats.totalCount, 3);
+assert.equal(strStats.emptyCount, 0);
+assert.equal(strStats.nonEmptyCount, 3);
+assert.equal(strStats.uniqueCount, 3);
+assert.equal(strStats.minLength, 5); // Paris, Tokyo
+assert.equal(strStats.maxLength, 9); // Amsterdam
+
+console.log('✅ Column Statistics Calculation passed.\n');
+
+console.log('Testing CSV & JSON Export with Header Deduplication (REAL implementation)...');
+
+const mockColNames = ['id', 'name', 'name']; // duplicate name!
+const mockRows = [
+  ['1', 'Alice', 'First entry'],
+  ['2', 'Bob, with comma', 'Has "quotes" inside\nand newline'],
+];
+
+const exportedCsv = rowsToCsv(mockColNames, mockRows);
+assert.ok(exportedCsv.startsWith('id,name,name\r\n'), 'CSV headers include original column names');
+assert.ok(exportedCsv.includes('"Bob, with comma"'), 'Comma cell properly escaped');
+assert.ok(exportedCsv.includes('"Has ""quotes"" inside\nand newline"'), 'Quotes and newlines escaped');
+
+const exportedJson = rowsToJson(mockColNames, mockRows);
+const parsedJson = JSON.parse(exportedJson);
+assert.equal(parsedJson.length, 2, '2 JSON rows exported');
+assert.equal(parsedJson[0].id, '1');
+assert.equal(parsedJson[0].name, 'Alice');
+assert.equal(parsedJson[0].name_2, 'First entry', 'Duplicate column deduplicated to name_2 in JSON export');
+assert.equal(parsedJson[1].name_2, 'Has "quotes" inside\nand newline');
+
+console.log('✅ CSV & JSON Export tests passed.\n');
 
 console.log('🎉 ALL PRODUCTION VERIFICATION TESTS PASSED SUCCESSFULLY! ✓');

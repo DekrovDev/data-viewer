@@ -1,0 +1,15 @@
+id,name,email,country,active,balance,created_at,notes
+1,Alice Johnson,alice@dekrov.com,United States,true,4820.50,2025-01-15T08:30:00Z,"Lead architect; enjoys ""clean code"" and coffee"
+2,Bob Smith,bob.smith@example.org,Canada,false,0.00,2025-02-01T14:12:30Z,"Account suspended, awaiting review"
+3,"García, Carlos",carlos.garcia@madrid.es,Spain,true,12450.75,2024-11-20T10:05:00Z,"Specialist in high-load distributed systems.
+Speaks Spanish, English, and Portuguese."
+4,Yuki Tanaka (田中 勇気),yuki.t@tokyo.jp,Japan,true,8930.20,2024-12-05T03:45:00Z,"Tokyo engineering hub; works on WebAssembly modules"
+5,Emma Watson,emma.w@oxford.ac.uk,United Kingdom,true,310.00,2025-03-10T11:22:15Z,
+6,Lukas Müller,lukas@berlin-tech.de,Germany,false,-45.50,2024-09-18T16:50:00Z,"Overdraft protection enabled;
+Contact via encrypted email only."
+7,Fatima Al-Mansoor,fatima@dubai.ae,United Arab Emirates,true,55000.00,2025-01-02T09:00:00Z,"VIP client; premium SLA tier"
+8,"O'Connor, Liam",liam@dublin.ie,Ireland,true,150.25,2025-02-14T17:30:00Z,"Quotes test: ""single 'quotes' inside double quotes"""
+9,Chen Wei (陈伟),chen.wei@shanghai.cn,China,true,98200.00,2024-10-12T02:15:00Z,"Handles East Asia cloud infrastructure & latency tests"
+10,Elena Rostova,elena.r@novosibirsk.ru,Kazakhstan,false,,2025-02-28T19:40:00Z,"Empty balance test; pending verification"
+11,Jean-Luc Picard,jeanluc@starfleet.fr,France,true,1701.00,2024-08-01T12:00:00Z,"Senior consultant, enterprise architecture"
+12,Sofia Rossi,s.rossi@milano.it,Italy,true,640.80,2025-03-01T07:18:00Z,"Mobile app engineer (iOS & Android)"

@@ -8,16 +8,19 @@ import {
   Terminal,
   Table,
   FileCode,
+  FileSpreadsheet,
   Layers,
   ArrowRight,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { DataFormat } from '../../core/detection/types';
 
 interface EmptyStateProps {
-  activeFormat?: 'json' | 'sqlite';
+  activeFormat?: DataFormat;
   onLoadSampleJson: () => void;
   onLoadSampleSqlite: () => void;
+  onLoadSampleCsv?: () => void;
   onOpenFilePicker: () => void;
   onPasteJson?: () => void;
 }
@@ -25,6 +28,7 @@ interface EmptyStateProps {
 export const EmptyState: React.FC<EmptyStateProps> = ({
   onLoadSampleJson,
   onLoadSampleSqlite,
+  onLoadSampleCsv,
   onOpenFilePicker,
   onPasteJson,
 }) => {
@@ -52,7 +56,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           </div>
 
           {/* Supported Format Pills */}
-          <div className="flex items-center gap-1.5 pt-1">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
             <span className="text-[11px] text-muted-foreground/80 font-medium">Supported formats:</span>
             <Badge variant="info" className="text-[10px] font-mono px-2 py-0.5 font-semibold">
               <FileJson className="w-3 h-3 mr-1" />
@@ -61,6 +65,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             <Badge variant="secondary" className="text-[10px] font-mono px-2 py-0.5 font-semibold bg-blue-950/40 text-blue-300 border border-blue-800/50">
               <Database className="w-3 h-3 mr-1" />
               SQLite (.db, .sqlite)
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] font-mono px-2 py-0.5 font-semibold bg-emerald-950/40 text-emerald-300 border border-emerald-800/50">
+              <FileSpreadsheet className="w-3 h-3 mr-1" />
+              CSV / TSV (.csv, .tsv)
             </Badge>
           </div>
         </div>
@@ -108,6 +116,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             <Database className="w-3.5 h-3.5 text-blue-400" />
             <span>Sample SQLite</span>
           </Button>
+
+          {onLoadSampleCsv && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onLoadSampleCsv}
+              className="gap-1.5 font-medium"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Sample CSV</span>
+            </Button>
+          )}
         </div>
 
         {/* Instructions Guide */}
@@ -127,11 +147,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-mono font-bold">
                   1
                 </span>
-                <span>Open or Drag & Drop</span>
+                <span>Open or Drag &amp; Drop</span>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Drag any <code className="text-foreground bg-muted px-1 py-0.2 rounded font-mono">.json</code> or{' '}
-                <code className="text-foreground bg-muted px-1 py-0.2 rounded font-mono">.db</code> file anywhere onto the page. Format is auto-detected.
+                Drag any <code className="text-foreground bg-muted px-1 py-0.2 rounded font-mono">.json</code>,{' '}
+                <code className="text-foreground bg-muted px-1 py-0.2 rounded font-mono">.db</code>, or{' '}
+                <code className="text-foreground bg-muted px-1 py-0.2 rounded font-mono">.csv/.tsv</code> file anywhere onto the page. Format is auto-detected.
               </p>
             </div>
 
@@ -141,10 +162,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-mono font-bold">
                   2
                 </span>
-                <span>Explore & Query</span>
+                <span>Explore &amp; Query</span>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Browse JSON in lazy Tree View with JSONPath copy. For SQLite, inspect tables, schema, and run queries in the SQL Console.
+                Browse JSON in lazy Tree View, query SQLite via SQL Console, or inspect CSV/TSV with virtualized rows, global search, and column filters.
               </p>
             </div>
 
@@ -157,7 +178,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 <span>Export Data</span>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Format, minify, and save your JSON. Export SQLite query results or table pages directly to CSV or JSON with a click.
+                Download formatted JSON, export SQLite query results, or export filtered CSV/TSV subsets directly to CSV or JSON with a single click.
               </p>
             </div>
           </div>
@@ -166,7 +187,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-border/50 text-[11px] text-muted-foreground">
             <div className="flex items-center gap-2">
               <Table className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-              <span>Virtualized SQLite grid handling large tables</span>
+              <span>Virtualized SQLite &amp; CSV grids handling large datasets</span>
             </div>
             <div className="flex items-center gap-2">
               <Terminal className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

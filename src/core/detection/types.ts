@@ -1,4 +1,4 @@
-export type DataFormat = 'json' | 'sqlite' | 'unknown';
+export type DataFormat = 'json' | 'sqlite' | 'csv' | 'unknown';
 
 export interface FormatMetadata {
   id: DataFormat;
@@ -19,5 +19,11 @@ export const SUPPORTED_FORMATS: FormatMetadata[] = [
     name: 'SQLite',
     description: 'SQLite 3 Relational Database',
     extensions: ['.db', '.sqlite', '.sqlite3'],
+  },
+  {
+    id: 'csv',
+    name: 'CSV / TSV',
+    description: 'Comma and Tab Separated Values',
+    extensions: ['.csv', '.tsv'],
   },
 ];

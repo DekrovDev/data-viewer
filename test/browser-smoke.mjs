@@ -424,6 +424,83 @@ async function run() {
     `);
     record('JSON module works: switches format, loads JSON data, renders tree', jsonTreeRendered);
 
+    // ─── 13. CSV / TSV module test ─────────────────────────────────────────
+    const clickCsvSwitcher = await cdp.evaluate(`
+      (() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const csvBtn = btns.find(b => b.textContent?.trim() === 'CSV');
+        if (csvBtn) {
+          csvBtn.click();
+          return true;
+        }
+        return false;
+      })()
+    `);
+    record('Switched to CSV module via Header switcher', clickCsvSwitcher);
+    await sleep(500);
+
+    // Click "Sample CSV"
+    const clickSampleCsv = await cdp.evaluate(`
+      (() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const sampleBtn = btns.find(b => b.textContent?.includes('Sample CSV'));
+        if (sampleBtn) {
+          sampleBtn.click();
+          return true;
+        }
+        return false;
+      })()
+    `);
+    record('Found and clicked "Sample CSV" button', clickSampleCsv);
+
+    // Wait for CSV Worker to parse and render table
+    await waitFor(async () => {
+      const text = await cdp.evaluate('document.body.innerText');
+      return text.includes('sample.csv') && text.includes('Alice Johnson');
+    }, 10000);
+    record('Sample CSV loaded and rendered table grid', true);
+
+    // Test search filter
+    const searchResult = await cdp.evaluate(`
+      (() => {
+        const input = document.querySelector('input[placeholder*="Search"]');
+        if (!input) return false;
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        nativeInputValueSetter.call(input, 'Carlos');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      })()
+    `);
+    await sleep(600); // debounce
+    const tableHasCarlos = await cdp.evaluate(`
+      (() => {
+        const text = document.body.innerText;
+        return text.includes('Carlos') && text.includes('carlos.garcia@madrid.es');
+      })()
+    `);
+    record('CSV search filter works correctly (filtering to "Carlos")', searchResult && tableHasCarlos);
+
+    // Test Switch to Overview tab
+    const clickOverview = await cdp.evaluate(`
+      (() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const overviewBtn = btns.find(b => b.textContent?.includes('Overview'));
+        if (overviewBtn) {
+          overviewBtn.click();
+          return true;
+        }
+        return false;
+      })()
+    `);
+    await sleep(500);
+    const csvOverviewRendered = await cdp.evaluate(`
+      (() => {
+        const text = document.body.innerText;
+        return text.includes('File Size') || text.includes('Delimiter') || text.includes('Total Rows') || text.includes('Columns');
+      })()
+    `);
+    record('CSV Overview panel displays dataset metadata and column breakdown', clickOverview && csvOverviewRendered);
+
     // ─── Summary ───────────────────────────────────────────────────────────
     console.log('\n========================================');
     console.log('BROWSER SMOKE TEST RESULTS:');

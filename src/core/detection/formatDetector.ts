@@ -48,7 +48,17 @@ export async function detectDataFormat(file: File): Promise<DataFormat> {
     if (valid) return 'sqlite';
   }
 
-  // Fallback: Check magic bytes regardless of extension
+  // CSV / TSV extension & MIME check
+  if (
+    name.endsWith('.csv') ||
+    name.endsWith('.tsv') ||
+    file.type === 'text/csv' ||
+    file.type === 'text/tab-separated-values'
+  ) {
+    return 'csv';
+  }
+
+  // Fallback: Check magic bytes regardless of extension (for SQLite)
   if (file.size >= 16) {
     const valid = await isSqliteFile(file);
     if (valid) return 'sqlite';

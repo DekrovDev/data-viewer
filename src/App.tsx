@@ -5,6 +5,7 @@ import { JsonModule } from './modules/json/components/JsonModule';
 import { StatusBar } from './modules/json/components/StatusBar';
 import { HistoryPanel } from './modules/json/components/HistoryPanel';
 import { SqliteModule } from './modules/sqlite/components/SqliteModule';
+import { CsvModule } from './modules/csv';
 import { useJsonParser } from './modules/json/hooks/useJsonParser';
 import { useJsonHistory } from './modules/json/hooks/useJsonHistory';
 import { detectDataFormat } from './core/detection/formatDetector';
@@ -19,6 +20,10 @@ export const App: React.FC = () => {
   // SQLite state
   const [sqliteBytes, setSqliteBytes] = useState<Uint8Array | null>(null);
   const [sqliteFileName, setSqliteFileName] = useState<string | null>(null);
+
+  // CSV state
+  const [csvContent, setCsvContent] = useState<string | null>(null);
+  const [csvFileName, setCsvFileName] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,8 +85,19 @@ export const App: React.FC = () => {
         toast.error(err instanceof Error ? err.message : 'Failed to read SQLite file');
       }
 
+    } else if (detected === 'csv') {
+      try {
+        const result = await readTextFile(file);
+        setActiveFormat('csv');
+        setCsvContent(result.content);
+        setCsvFileName(result.filename);
+        toast.success(`Loaded "${result.filename}" (CSV, ${(result.sizeBytes / 1024).toFixed(1)} KB)`);
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Failed to read CSV file');
+      }
+
     } else {
-      toast.error(`Unsupported file format: "${file.name}". Supported: JSON, SQLite (.db/.sqlite/.sqlite3)`);
+      toast.error(`Unsupported file format: "${file.name}". Supported: JSON, SQLite (.db/.sqlite/.sqlite3), CSV/TSV (.csv/.tsv)`);
     }
   }, [loadContent]);
 
@@ -118,6 +134,8 @@ export const App: React.FC = () => {
     setActiveFormat('json');
     setSqliteBytes(null);
     setSqliteFileName(null);
+    setCsvContent(null);
+    setCsvFileName(null);
     loadSample();
     toast.success('Sample JSON dataset loaded');
   }, [loadSample]);
@@ -132,6 +150,8 @@ export const App: React.FC = () => {
       setActiveFormat('sqlite');
       setSqliteBytes(bytes);
       setSqliteFileName('sample.db');
+      setCsvContent(null);
+      setCsvFileName(null);
       toast.dismiss();
       toast.success(`Sample SQLite database loaded (${(bytes.length / 1024).toFixed(1)} KB)`);
     } catch (err: unknown) {
@@ -140,15 +160,36 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  const handleLoadSampleCsv = useCallback(async () => {
+    try {
+      toast.loading('Fetching sample.csv...');
+      const resp = await fetch('/sample.csv');
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+      const text = await resp.text();
+      setActiveFormat('csv');
+      setCsvContent(text);
+      setCsvFileName('sample.csv');
+      setSqliteBytes(null);
+      setSqliteFileName(null);
+      toast.dismiss();
+      toast.success(`Sample CSV dataset loaded (${(text.length / 1024).toFixed(1)} KB)`);
+    } catch (err: unknown) {
+      toast.dismiss();
+      toast.error(err instanceof Error ? err.message : 'Failed to load sample CSV');
+    }
+  }, []);
+
   // ─── Header Sample handler (unified per active format) ────────────────────────
 
   const handleHeaderLoadSample = useCallback(() => {
     if (activeFormat === 'sqlite') {
       handleLoadSampleSqlite();
+    } else if (activeFormat === 'csv') {
+      handleLoadSampleCsv();
     } else {
       handleLoadSampleJson();
     }
-  }, [activeFormat, handleLoadSampleJson, handleLoadSampleSqlite]);
+  }, [activeFormat, handleLoadSampleJson, handleLoadSampleSqlite, handleLoadSampleCsv]);
 
   // ─── Format Switch ───────────────────────────────────────────────────────────
 
@@ -160,14 +201,19 @@ export const App: React.FC = () => {
   const handleCloseSqlite = useCallback(() => {
     setSqliteBytes(null);
     setSqliteFileName(null);
-    setActiveFormat('json');
+  }, []);
+
+  const handleCloseCsv = useCallback(() => {
+    setCsvContent(null);
+    setCsvFileName(null);
   }, []);
 
   // ─── Determine what to show ──────────────────────────────────────────────────
 
   const showSqliteModule = activeFormat === 'sqlite' && sqliteBytes !== null;
+  const showCsvModule = activeFormat === 'csv' && csvContent !== null;
   const showJsonModule = activeFormat === 'json' && rawJson.trim().length > 0;
-  const showEmptyState = !showSqliteModule && !showJsonModule;
+  const showEmptyState = !showSqliteModule && !showJsonModule && !showCsvModule;
 
   return (
     <div
@@ -179,7 +225,7 @@ export const App: React.FC = () => {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,.db,.sqlite,.sqlite3,application/json,application/x-sqlite3"
+        accept=".json,.db,.sqlite,.sqlite3,.csv,.tsv,application/json,application/x-sqlite3,text/csv,text/tab-separated-values"
         className="hidden"
         onChange={handleFileInputChange}
       />
@@ -205,6 +251,14 @@ export const App: React.FC = () => {
           />
         )}
 
+        {showCsvModule && (
+          <CsvModule
+            content={csvContent}
+            fileName={csvFileName}
+            onCloseFile={handleCloseCsv}
+          />
+        )}
+
         {showJsonModule && (
           <JsonModule
             rawJson={rawJson}
@@ -221,9 +275,10 @@ export const App: React.FC = () => {
 
         {showEmptyState && (
           <EmptyState
-            activeFormat={activeFormat === 'sqlite' ? 'sqlite' : 'json'}
+            activeFormat={activeFormat}
             onLoadSampleJson={handleLoadSampleJson}
             onLoadSampleSqlite={handleLoadSampleSqlite}
+            onLoadSampleCsv={handleLoadSampleCsv}
             onOpenFilePicker={handleOpenFilePicker}
             onPasteJson={() => {
               setActiveFormat('json');
