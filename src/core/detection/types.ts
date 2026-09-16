@@ -1,4 +1,4 @@
-export type DataFormat = 'json' | 'unknown';
+export type DataFormat = 'json' | 'sqlite' | 'unknown';
 
 export interface FormatMetadata {
   id: DataFormat;
@@ -13,5 +13,11 @@ export const SUPPORTED_FORMATS: FormatMetadata[] = [
     name: 'JSON',
     description: 'JavaScript Object Notation',
     extensions: ['.json'],
+  },
+  {
+    id: 'sqlite',
+    name: 'SQLite',
+    description: 'SQLite 3 Relational Database',
+    extensions: ['.db', '.sqlite', '.sqlite3'],
   },
 ];

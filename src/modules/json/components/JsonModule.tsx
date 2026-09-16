@@ -165,7 +165,8 @@ export const JsonModule: React.FC<JsonModuleProps> = ({
       }`}>
         {!rawJson.trim() ? (
           <EmptyState
-            onLoadSample={loadSample}
+            onLoadSampleJson={loadSample}
+            onLoadSampleSqlite={() => {}}
             onOpenFilePicker={onOpenFilePicker}
           />
         ) : (
