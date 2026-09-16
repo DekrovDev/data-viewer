@@ -143,47 +143,6 @@ npm run typecheck
 
 ---
 
-## 🏗️ Architecture
-
-The codebase follows a modular design pattern:
-
-`	ext
-data-viewer/
-├── .github/workflows/deploy.yml   # GitHub Pages deployment workflow
-├── public/
-│   ├── CNAME                      # Custom domain definition (data.dekrov.com)
-│   └── favicon.svg                # Application favicon
-├── src/
-│   ├── core/                      # Core cross-cutting foundational services
-│   │   ├── detection/             # Multi-format detection (extension & MIME)
-│   │   └── files/                 # Universal file reader and downloader
-│   ├── shared/                    # Shared reusable design system & utilities
-│   │   ├── components/
-│   │   │   ├── ui/                # Accessible Radix primitives (Button, Tooltip, Dialog, Badge, Tabs)
-│   │   │   ├── Header.tsx         # Top bar with format indicator & navigation
-│   │   │   └── EmptyState.tsx     # Format-agnostic start screen
-│   │   └── lib/                   # Formatting and class name utilities
-│   ├── modules/
-│   │   └── json/                  # Isolated JSON viewer module
-│   │       ├── components/        # Tree, Editor, Search, Pretty, Raw, StatusBar
-│   │       ├── hooks/             # Parser, Search, and History hooks
-│   │       ├── lib/               # jsonPath, jsonStats, parser helpers
-│   │       ├── types/             # JSON data contracts & interfaces
-│   │       └── index.ts           # Module barrel export
-│   ├── App.tsx                    # Main coordinator container
-│   ├── index.css                  # Global styles and design tokens
-│   └── main.tsx                   # React application entry point
-├── test/
-│   └── verify.mjs                 # Unit tests (Path builder, stats, format detection)
-├── index.html                     # HTML template
-├── package.json                   # Project metadata
-├── tailwind.config.js             # Dark-first developer theme
-├── tsconfig.json                  # Strict TypeScript configuration
-└── vite.config.ts                 # Vite bundler configuration (base: '/')
-`
-
----
-
 ## 🔒 Privacy Guarantee
 
 This tool operates **entirely within your browser's JavaScript runtime**.
