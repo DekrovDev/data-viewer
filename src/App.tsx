@@ -225,6 +225,10 @@ export const App: React.FC = () => {
             onLoadSampleJson={handleLoadSampleJson}
             onLoadSampleSqlite={handleLoadSampleSqlite}
             onOpenFilePicker={handleOpenFilePicker}
+            onPasteJson={() => {
+              setActiveFormat('json');
+              loadContent('{\n  \n}');
+            }}
           />
         )}
       </main>

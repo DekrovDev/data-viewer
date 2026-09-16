@@ -150,14 +150,15 @@ async function run() {
     await cdp.send('Page.navigate', { url: APP_URL });
     await sleep(1500);
 
-    // ─── 2. App loads & EmptyState visible (no black screen) ───────────────
+    // ─── 2. App loads with EmptyState & instructions (no preloaded dummy data) ───
     const bodyText = await cdp.evaluate('document.body.innerText');
-    const hasDataViewer = bodyText.includes('Data Viewer') || bodyText.includes('JSON') || bodyText.includes('SQLite');
-    const isNotBlackScreen = bodyText.length > 20;
+    const hasDataViewer = bodyText.includes('Data Viewer');
+    const hasInstructions = bodyText.includes('How to get started') || bodyText.includes('Open or Drag & Drop');
+    const hasNoDummyJson = !bodyText.includes('alex_dev') && !bodyText.includes('Interactive Tree Navigation');
     record(
-      'App loads without blank/black screen',
-      hasDataViewer && isNotBlackScreen,
-      `Body text length: ${bodyText.length}`
+      'App starts clean with instructions and without pre-loaded dummy JSON',
+      hasDataViewer && hasInstructions && hasNoDummyJson,
+      `Instructions visible: ${hasInstructions}, clean: ${hasNoDummyJson}`
     );
 
     // ─── 3. sqlite3.wasm returns 200 ───────────────────────────────────────
@@ -404,6 +405,16 @@ async function run() {
     `);
     record('Switched back to JSON module in Header', clickJsonSwitcher);
     await sleep(500);
+
+    // Click "Sample JSON" to load sample JSON data into clean editor
+    await cdp.evaluate(`
+      (() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const sampleBtn = btns.find(b => b.textContent?.includes('Sample JSON'));
+        sampleBtn?.click();
+      })()
+    `);
+    await sleep(600);
 
     const jsonTreeRendered = await cdp.evaluate(`
       (() => {

@@ -4,7 +4,7 @@ import { parseJson, formatJson, minifyJson, SAMPLE_JSON } from '../lib/json';
 
 const DEBOUNCE_MS = 250;
 
-export function useJsonParser(initialValue: string = SAMPLE_JSON) {
+export function useJsonParser(initialValue: string = '') {
   const [rawJson, setRawJson] = useState<string>(initialValue);
   const [parseResult, setParseResult] = useState<ParseResult>(() => parseJson(initialValue));
   const [isParsing, setIsParsing] = useState<boolean>(false);
